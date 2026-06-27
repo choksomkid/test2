@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจองรถไปราชการ - โรงเรียนสุโขทัยวิทยาคม</title>
+    <!-- Google Font: Kanit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #f8fafc; }
+        .glass-hero { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .slide-up { animation: slideUp 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5', // Indigo
+                        secondary: '#475569', // Slate
+                        success: '#10b981', // Emerald
+                        warning: '#f59e0b', // Amber
+                        danger: '#ef4444', // Red
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- ====================================================================
+         LOADING APP LOADER
+         ==================================================================== -->
+    <div id="global-loader" class="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center backdrop-blur-sm hidden">
+        <div class="bg-white p-5 rounded-2xl shadow-2xl flex flex-col items-center gap-3">
+            <div class="animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent"></div>
+            <p class="text-sm font-medium text-slate-600" id="loader-text">กำลังประมวลผลข้อมูล...</p>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         TOAST NOTIFICATION
+         ==================================================================== -->
+    <div id="toast-box" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ====================================================================
+         GUEST MODE: LANDING PAGE & DASHBOARD OVERVIEW
+         ==================================================================== -->
+    <div id="landing-page" class="flex-1 flex flex-col fade-in">
+        <!-- Top Navigation Line -->
+        <header class="bg-white border-b border-slate-100 sticky top-0 z-40 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md shadow-indigo-200">
+                        <i data-lucide="car" class="h-6 w-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-slate-900 leading-tight text-sm sm:text-base">ระบบจองรถไปราชการ</h1>
+                        <p class="text-xs text-slate-500">โรงเรียนสุโขทัยวิทยาคม</p>
+                    </div>
+                </div>
+                <button onclick="switchGuestView('login')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-medium shadow-lg shadow-indigo-100 transition duration-200 flex items-center gap-2 scale-hover">
+                    <i data-lucide="log-in" class="h-4 w-4"></i> เข้าสู่ระบบ
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Dynamic Area for Guest -->
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+            
+            <!-- SECTION: HERO & STATS OVERVIEW -->
+            <div id="guest-overview-section" class="space-y-8">
+                <!-- Hero Section with Glassmorphism -->
+                <div class="glass-hero rounded-3xl p-6 sm:p-10 relative overflow-hidden shadow-sm border border-slate-200/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div class="space-y-3 max-w-2xl z-10">
+                        <span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-3 py-1 rounded-full border border-indigo-100">Sukhothai Wittayakom School</span>
+                        <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">บริหารจัดการจัดสรรยานพาหนะ<br><span class="text-indigo-600">เพื่อความปลอดภัยและฉับไว</span>ในการปฏิบัติราชการ</h2>
+                        <p class="text-sm text-slate-600">ระบบตรวจสอบสถานะยานพาหนะ ตารางวิ่งรถไปราชการ และส่งคำขอจองคิวรถส่วนกลางของบุคลากรภายในโรงเรียนสุโขทัยวิทยาคม</p>
+                    </div>
+                    <div class="flex gap-3 z-10 w-full md:w-auto">
+                        <button onclick="switchGuestView('login')" class="flex-1 md:flex-initial bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-medium text-sm transition shadow-lg flex items-center justify-center gap-2">
+                            เริ่มยื่นคำขอจองรถ <i data-lucide="arrow-right" class="h-4 w-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Counters Grid -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="p-3 rounded-xl bg-indigo-50 text-indigo-600"><i data-lucide="truck" class="h-6 w-6"></i></div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">ยานพาหนะทั้งหมด</p>
+                            <h4 class="text-xl sm:text-2xl font-bold text-slate-900" id="stat-total-cars">4</h4>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="p-3 rounded-xl bg-emerald-50 text-emerald-600"><i data-lucide="check-circle" class="h-6 w-6"></i></div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">พร้อมปฏิบัติงาน</p>
+                            <h4 class="text-xl sm:text-2xl font-bold text-slate-900" id="stat-avail-cars">3</h4>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="p-3 rounded-xl bg-amber-50 text-amber-600"><i data-lucide="calendar" class="h-6 w-6"></i></div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">ภารกิจในเดือนนี้</p>
+                            <h4 class="text-xl sm:text-2xl font-bold text-slate-900" id="stat-month-bookings">1</h4>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="p-3 rounded-xl bg-blue-50 text-blue-600"><i data-lucide="users" class="h-6 w-6"></i></div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-500">พนักงานขับรถ</p>
+                            <h4 class="text-xl sm:text-2xl font-bold text-slate-900" id="stat-total-drivers">2</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Schedule & Data Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Realtime Charts -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 lg:col-span-1 space-y-4">
+                        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2"><i data-lucide="pie-chart" class="text-indigo-600 h-5 w-5"></i> สัดส่วนประเภทรถกลาง</h3>
+                        <div class="relative max-h-64 mx-auto">
+                            <canvas id="guestVehicleChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Calendar / Upcoming Approved Trips -->
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2"><i data-lucide="clipboard-list" class="text-indigo-600 h-5 w-5"></i> ตารางเดินทางไปราชการสัปดาห์นี้</h3>
+                            <span class="text-xs text-indigo-600 bg-indigo-50 font-medium px-2.5 py-1 rounded-full animate-pulse">อัปเดตเรียลไทม์</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="border-b border-slate-100 text-slate-500 text-xs font-semibold">
+                                        <th class="py-3 px-2">วันเวลาเดินทาง</th>
+                                        <th class="py-3 px-2">สถานที่ปลายทาง</th>
+                                        <th class="py-3 px-2">รถที่ใช้</th>
+                                        <th class="py-3 px-2">ผู้ไปราชการ</th>
+                                        <th class="py-3 px-2">สถานะ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="guest-booking-rows" class="divide-y divide-slate-50 text-slate-600">
+                                    <!-- Render via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION: LOGIN FORM -->
+            <div id="guest-login-section" class="max-w-md mx-auto bg-white p-8 rounded-3xl shadow-xl border border-slate-100 space-y-6 hidden slide-up">
+                <div class="text-center space-y-2">
+                    <div class="inline-flex bg-indigo-50 text-indigo-600 p-3 rounded-2xl mb-2"><i data-lucide="shield-check" class="h-8 w-8"></i></div>
+                    <h3 class="text-xl font-bold text-slate-900">เข้าสู่ระบบสารสนเทศ</h3>
+                    <p class="text-xs text-slate-500">กรุณาป้อนชื่อผู้ใช้งานของโรงเรียนเพื่อตรวจสอบสิทธิ์</p>
+                </div>
+                <form id="login-form" onsubmit="handleCustomLogin(event)" class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-semibold text-slate-600">ชื่อผู้ใช้งาน (Username)</label>
+                        <div class="relative">
+                            <i data-lucide="user" class="absolute left-3.5 top-1.5/2 transform -translate-y-1/2 text-slate-400 h-4 w-4"></i>
+                            <input type="text" id="login-username" required class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-indigo-500 transition" placeholder="เช่น admin หรือ teacher1">
+                        </div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-semibold text-slate-600">รหัสผ่าน (Password)</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="absolute left-3.5 top-1.5/2 transform -translate-y-1/2 text-slate-400 h-4 w-4"></i>
+                            <input type="password" id="login-password" required class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-indigo-500 transition" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl text-sm transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2">
+                        <i data-lucide="key-round" class="h-4 w-4"></i> ตรวจสอบสิทธิ์เข้าใช้งาน
+                    </button>
+                </form>
+                <div class="text-center">
+                    <button onclick="switchGuestView('overview')" class="text-xs text-slate-500 hover:text-indigo-600 font-medium transition inline-flex items-center gap-1">
+                        <i data-lucide="arrow-left" class="h-3 w-3"></i> กลับหน้าภาพรวมโรงเรียน
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ====================================================================
+         AUTHENTICATED MODE: MAIN PANEL WRAPPER
+         ==================================================================== -->
+    <div id="auth-app-layout" class="flex-1 flex flex-col md:flex-row hidden fade-in">
+        
+        <!-- DESKTOP FIXED SIDEBAR (Left side) -->
+        <aside class="hidden md:flex flex-col w-64 bg-slate-900 text-slate-200 fixed left-0 top-0 h-screen z-30 shadow-xl">
+            <div class="p-5 border-b border-slate-800 flex items-center gap-3 bg-slate-950">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl"><i data-lucide="car" class="h-5 w-5"></i></div>
+                <div>
+                    <h2 class="font-bold text-sm text-white tracking-wide">สวค. จองรถยนต์</h2>
+                    <p class="text-[10px] text-slate-400">ระบบสารสนเทศภายใน</p>
+                </div>
+            </div>
+            
+            <!-- Sidebar Navigation Links -->
+            <nav class="flex-1 p-4 space-y-1.5" id="desktop-nav-menu">
+                <!-- Render dynamically based on user role -->
+            </nav>
+
+            <!-- Sidebar Footer Profile Card -->
+            <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex items-center justify-between">
+                <div class="flex items-center gap-2.5 overflow-hidden">
+                    <div class="h-9 w-9 rounded-xl bg-indigo-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0" id="user-avatar-desktop">U</div>
+                    <div class="overflow-hidden">
+                        <p class="text-xs font-semibold text-white truncate" id="user-fullname-desktop">User Name</p>
+                        <p class="text-[10px] text-slate-400" id="user-role-desktop">Role</p>
+                    </div>
+                </div>
+                <button onclick="openLogoutModal()" class="text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-800 transition">
+                    <i data-lucide="log-out" class="h-4 w-4"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- APP CONTENT AREA (Right side on desktop, full width on mobile) -->
+        <main class="flex-1 md:pl-64 min-h-screen flex flex-col pb-20 md:pb-6">
+            <!-- App Header Context -->
+            <header class="bg-white border-b border-slate-100 h-16 px-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
+                <div class="flex items-center gap-2">
+                    <h2 class="font-bold text-slate-800 text-base sm:text-lg" id="current-view-title">หน้าหลักระบบ</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full" id="role-badge">Role Badge</span>
+                </div>
+            </header>
+
+            <!-- Dynamic View Container -->
+            <div class="p-4 sm:p-6 lg:p-8 flex-1 w-full max-w-7xl mx-auto" id="auth-view-content">
+                <!-- Inner view renders here dynamically via JavaScript -->
+            </div>
+        </main>
+
+        <!-- MOBILE BOTTOM NAVIGATION BAR -->
+        <div class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 flex justify-around items-center z-40 px-2 shadow-xl" id="mobile-bottom-nav">
+            <!-- Render menu dynamically or injection via Javascript -->
+        </div>
+
+        <!-- ADMIN EXCLUSIVE BOTTOM SLIDE-UP GRID PANEL -->
+        <div id="admin-mobile-panel" class="hidden md:hidden fixed bottom-16 left-0 right-0 bg-white border-t border-slate-200 shadow-2xl p-5 grid grid-cols-3 gap-4 z-40 slide-up rounded-t-3xl">
+            <!-- Admin Control grid elements -->
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MODAL & DIALOG SYSTEMS
+         ==================================================================== -->
+    <!-- Confirmation Modal / Dialog -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center backdrop-blur-sm hidden fade-in">
+        <div class="bg-white p-6 rounded-2xl max-w-sm w-full mx-4 shadow-2xl space-y-4 slide-up">
+            <h4 class="font-bold text-slate-900 text-lg" id="confirm-title">ยืนยันการทำรายการ</h4>
+            <p class="text-sm text-slate-600" id="confirm-message">คุณแน่ใจหรือไม่ว่าต้องการดำเนินการนี้?</p>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeConfirmModal(false)" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-xl transition">ยกเลิก</button>
+                <button onclick="closeConfirmModal(true)" id="confirm-submit-btn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition shadow-lg shadow-indigo-100">ตกลง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dynamic Action Modal -->
+    <div id="action-modal" class="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm hidden overflow-y-auto p-4 fade-in">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col slide-up max-h-[90vh]">
+            <div class="bg-slate-900 p-4 text-white flex justify-between items-center">
+                <h4 class="font-bold text-sm sm:text-base" id="action-modal-title">จัดการข้อมูล</h4>
+                <button onclick="closeActionModal()" class="text-slate-400 hover:text-white transition"><i data-lucide="x" class="h-5 w-5"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4" id="action-modal-body">
+                <!-- Injected Form Fields -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         JAVASCRIPT LOGIC & SUPABASE APPLICATION STATE
+         ==================================================================== -->
+    <script>
+        // --- 1. CONFIGURATION & STATE MANAGEMENT ---
+        // ใส่ข้อมูล Supabase Credentials ของท่านที่ต้องการเชื่อมต่อจริงตรงนี้
+        const SUPABASE_URL = "https://yhikhipcvgnwdcykmafu.supabase.co"; 
+        const SUPABASE_ANON_KEY = "sb_publishable_qEBdbqqqPMpb8X_9k3srjg_a8cw3FVX";
+
+        // ประกาศตัวแปรเชื่อมต่อระบบแอปห้ามซ้ำกับชื่อไลบรารี่หลัก (ห้ามตั้งชื่อว่า supabase)
+        let sbApp = null;
+        try {
+            if (SUPABASE_URL && !SUPABASE_URL.includes("your-supabase-project")) {
+                sbApp = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch(e) { console.error("Supabase connection failed, entering fallback mock mode.", e); }
+
+        // Local Application Data state (พร้อมทำงานทดสอบเป็น Fallback เสมอหากไม่มีฐานข้อมูล)
+        let state = {
+            currentUser: null,
+            currentView: 'dashboard',
+            vehicles: [
+                { id: 'c1111111-1111-1111-1111-111111111111', license_plate: 'นข-1234 สุโขทัย', vehicle_type: 'รถตู้', model_name: 'Toyota Commuter สีเงิน', capacity: 15, status: 'พร้อมใช้งาน', image_url: '' },
+                { id: 'c2222222-2222-2222-2222-222222222222', license_plate: 'มฐ-5678 สุโขทัย', vehicle_type: 'รถบัส', model_name: 'Hino ปรับอากาศ', capacity: 40, status: 'พร้อมใช้งาน', image_url: '' },
+                { id: 'c3333333-3333-3333-3333-333333333333', license_plate: 'กข-9999 สุโขทัย', vehicle_type: 'รถเก๋ง', model_name: 'Honda Civic สีดำ', capacity: 5, status: 'อยู่ระหว่างซ่อมบำรุง', image_url: '' },
+                { id: 'c4444444-4444-4444-4444-444444444444', license_plate: 'ผผ-4422 สุโขทัย', vehicle_type: 'รถกระบะ', model_name: 'Isuzu D-Max สีเทา', capacity: 4, status: 'พร้อมใช้งาน', image_url: '' }
+            ],
+            users: [
+                { id: 'b1111111-1111-1111-1111-111111111111', username: 'admin', role: 'Admin', full_name: 'ดร.สมชาย นพคุณ', position: 'ผู้อำนวยการโรงเรียน', phone: '0812345678' },
+                { id: 'b2222222-2222-2222-2222-222222222222', username: 'teacher1', role: 'Teacher', full_name: 'นายวิชาญ รักเรียน', position: 'ครูกลุ่มสาระวิทยาศาสตร์', phone: '0898765432' },
+                { id: 'b3333333-3333-3333-3333-333333333333', username: 'teacher2', role: 'Teacher', full_name: 'นางสาวอนงค์ งดงาม', position: 'ครูกลุ่มสาระภาษาไทย', phone: '0865432109' },
+                { id: 'b4444444-4444-4444-4444-444444444444', username: 'driver1', role: 'Driver', full_name: 'นายสมหวัง พลขับ', position: 'พนักงานขับรถยนต์ (คันที่ 1)', phone: '0855555555' },
+                { id: 'b5555555-5555-5555-5555-555555555555', username: 'driver2', role: 'Driver', full_name: 'นายบุญมี ไปดี', position: 'พนักงานขับรถยนต์ (คันที่ 2)', phone: '0844444444' }
+            ],
+            bookings: [
+                { id: 'bk-1', user_id: 'b2222222-2222-2222-2222-222222222222', vehicle_id: 'c1111111-1111-1111-1111-111111111111', driver_id: 'b4444444-4444-4444-4444-444444444444', purpose: 'นำนักเรียนเข้าร่วมแข่งขันโครงงานวิทยาศาสตร์ ระดับภาค', destination: 'ศูนย์ประชุมนานาชาติเชียงใหม่', passenger_count: 12, start_date: '2026-06-28T08:00', end_date: '2026-06-30T16:30', status: 'อนุมัติแล้ว', admin_notes: 'เดินทางปลอดภัย ตรวจสอบสภาพรถก่อนออกเดินทาง' },
+                { id: 'bk-2', user_id: 'b3333333-3333-3333-3333-333333333333', vehicle_id: null, driver_id: null, purpose: 'ไปอบรมหลักสูตรการสอนภาษาไทยแนวใหม่', destination: 'สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาสุโขทัย', passenger_count: 2, start_date: '2026-07-02T09:00', end_date: '2026-07-02T16:00', status: 'รออนุมัติ', admin_notes: '' }
+            ],
+            filters: { search: '', status: 'All' },
+            activeChart: null,
+            confirmCallback: null,
+            isAdminMobilePanelOpen: false
+        };
+
+        // --- 2. LIFE CYCLE ON LOAD ---
+        window.addEventListener('DOMContentLoaded', async () => {
+            showLoader(true, "กำลังเชื่อมต่อคลาวด์เซิร์ฟเวอร์...");
+            await syncWithSupabase();
+            showLoader(false);
+            lucide.createIcons();
+            renderGuestLanding();
+        });
+
+        // ดึงข้อมูลเรียลไทม์จากสคริปต์ตารางของ Supabase (ถ้ามี)
+        async function syncWithSupabase() {
+            if (!sbApp) return;
+            try {
+                let { data: v } = await sbApp.from('vt_vehicles').select('*');
+                if (v && v.length) state.vehicles = v;
+                let { data: u } = await sbApp.from('vt_users').select('*');
+                if (u && u.length) state.users = u;
+                let { data: b } = await sbApp.from('vt_bookings').select('*');
+                if (b && b.length) state.bookings = b;
+            } catch (err) { console.warn("Working on offline local-state data sync."); }
+        }
+
+        // --- 3. UI ELEMENT UTILITIES ---
+        function showLoader(show, text = "กำลังประมวลผล...") {
+            const l = document.getElementById('global-loader');
+            document.getElementById('loader-text').innerText = text;
+            show ? l.classList.remove('hidden') : l.classList.add('hidden');
+        }
+
+        function showToast(msg, type = 'success') {
+            const box = document.getElementById('toast-box');
+            const t = document.createElement('div');
+            t.className = `p-4 rounded-xl shadow-xl text-white font-medium text-sm flex items-center gap-2 pointer-events-auto transition duration-300 transform translate-y-2 fade-in`;
+            
+            let icon = 'info';
+            if (type === 'success') { t.classList.add('bg-emerald-600'); icon = 'check-circle'; }
+            else if (type === 'warning') { t.classList.add('bg-amber-500'); icon = 'alert-triangle'; }
+            else { t.classList.add('bg-red-600'); icon = 'alert-circle'; }
+
+            t.innerHTML = `<i data-lucide="${icon}" class="h-4 w-4"></i> <span>${msg}</span>`;
+            box.appendChild(t);
+            lucide.createIcons();
+            setTimeout(() => { t.remove(); }, 3500);
+        }
+
+        function openConfirmModal(title, msg, callback) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = msg;
+            state.confirmCallback = callback;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal(result) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            if (result && state.confirmCallback) state.confirmCallback();
+            state.confirmCallback = null;
+        }
+
+        function openActionModal(title, contentHtml) {
+            document.getElementById('action-modal-title').innerText = title;
+            document.getElementById('action-modal-body').innerHTML = contentHtml;
+            document.getElementById('action-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeActionModal() {
+            document.getElementById('action-modal').classList.add('hidden');
+        }
+
+        // --- 4. VIEW ROUTING ENGINE (SPA - NO REFRESH) ---
+        function switchGuestView(target) {
+            const over = document.getElementById('guest-overview-section');
+            const log = document.getElementById('guest-login-section');
+            if (target === 'login') {
+                over.classList.add('hidden');
+                log.classList.remove('hidden');
+            } else {
+                log.classList.add('hidden');
+                over.classList.remove('hidden');
+                renderGuestLanding();
+            }
+        }
+
+        function navigateTo(viewId) {
+            state.currentView = viewId;
+            state.isAdminMobilePanelOpen = false;
+            document.getElementById('admin-mobile-panel').classList.add('hidden');
+            
+            // Set dynamic header title
+            const titles = { 'dashboard': 'แดชบอร์ดภาพรวม', 'bookings': 'ระบบจองรถราชการ', 'vehicles': 'จัดการยานพาหนะโรงเรียน', 'profile': 'ข้อมูลผู้ใช้งานของท่าน' };
+            document.getElementById('current-view-title').innerText = titles[viewId] || 'ระบบสารสนเทศ';
+
+            // Active Menu CSS Highlights
+            renderNavMenus();
+            
+            // Core View Selector Switch
+            const contentBox = document.getElementById('auth-view-content');
+            contentBox.className = "p-4 sm:p-6 lg:p-8 flex-1 w-full max-w-7xl mx-auto fade-in";
+            
+            if (viewId === 'dashboard') renderDashboardModule(contentBox);
+            else if (viewId === 'bookings') renderBookingModule(contentBox);
+            else if (viewId === 'vehicles') renderVehicleModule(contentBox);
+            else if (viewId === 'profile') renderProfileModule(contentBox);
+            
+            lucide.createIcons();
+        }
+
+        // --- 5. CUSTOM AUTHENTICATION ---
+        function handleCustomLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-username').value.trim();
+            const p = document.getElementById('login-password').value.trim();
+
+            const match = state.users.find(user => user.username === u);
+            // เพื่อทดสอบได้ง่ายแอดมินใช้รหัสตรงตัว คนอื่นใช้รหัส password123 หรือ 1234 ตาม mock
+            if (match && (p === 'admin321' || p === '1234' || p === 'password123')) {
+                state.currentUser = match;
+                showToast(`ยินดีต้อนรับคุณ ${match.full_name} เข้าสู่ระบบ`, 'success');
+                
+                // Switch DOM Layout Views
+                document.getElementById('landing-page').classList.add('hidden');
+                document.getElementById('auth-app-layout').classList.remove('hidden');
+                
+                // Feed User Details to elements
+                document.getElementById('user-fullname-desktop').innerText = match.full_name;
+                document.getElementById('user-role-desktop').innerText = match.role;
+                document.getElementById('role-badge').innerText = `สิทธิ์: ${match.role}`;
+                document.getElementById('user-avatar-desktop').innerText = match.full_name.charAt(0);
+
+                // Clear Login form values safely
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
+
+                navigateTo('dashboard');
+            } else {
+                showToast('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้องสำหรับโรงเรียนนี้', 'danger');
+            }
+        }
+
+        function openLogoutModal() {
+            openConfirmModal("ออกจากระบบ", "คุณต้องการออกจากระบบงานสารสนเทศนี้หรือไม่?", () => {
+                state.currentUser = null;
+                document.getElementById('auth-app-layout').classList.add('hidden');
+                document.getElementById('landing-page').classList.remove('hidden');
+                switchGuestView('overview');
+                showToast("ออกจากระบบเสร็จสิ้นแล้ว", "success");
+            });
+        }
+
+        // --- 6. NAVIGATION MENUS GENERATORS (DESKTOP & MOBILE RESPONSIVE) ---
+        function renderNavMenus() {
+            const role = state.currentUser ? state.currentUser.role : 'Guest';
+            const menuItems = [
+                { id: 'dashboard', label: 'หน้าแรก / แดชบอร์ด', icon: 'layout-dashboard', roles: ['Admin', 'Teacher', 'Driver'] },
+                { id: 'bookings', label: 'การจองรถไปราชการ', icon: 'calendar-days', roles: ['Admin', 'Teacher', 'Driver'] },
+                { id: 'vehicles', label: 'ข้อมูลยานพาหนะ', icon: 'car-front', roles: ['Admin', 'Teacher', 'Driver'] },
+                { id: 'profile', label: 'บัญชีของฉัน', icon: 'user-circle', roles: ['Admin', 'Teacher', 'Driver'] }
+            ];
+
+            // Render Desktop Navigation Left Menu
+            const dNav = document.getElementById('desktop-nav-menu');
+            dNav.innerHTML = '';
+            menuItems.forEach(item => {
+                if (item.roles.includes(role)) {
+                    const isAct = state.currentView === item.id;
+                    dNav.innerHTML += `
+                        <button onclick="navigateTo('${item.id}')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition duration-200 ${isAct ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}">
+                            <i data-lucide="${item.icon}" class="h-4 w-4"></i> ${item.label}
+                        </button>
+                    `;
+                }
+            });
+
+            // Render Mobile Bottom Bar Menu Content
+            const mNav = document.getElementById('mobile-bottom-nav');
+            const mPanel = document.getElementById('admin-mobile-panel');
+            mNav.innerHTML = '';
+
+            if (role !== 'Admin') {
+                // Regular User Bottom Layout
+                menuItems.forEach(item => {
+                    if (item.roles.includes(role)) {
+                        const isAct = state.currentView === item.id;
+                        mNav.innerHTML += `
+                            <button onclick="navigateTo('${item.id}')" class="flex flex-col items-center gap-0.5 py-1 text-slate-500 transition ${isAct ? 'text-indigo-600 font-medium' : 'text-slate-400'}">
+                                <i data-lucide="${item.icon}" class="h-5 w-5"></i>
+                                <span class="text-[10px]">${item.label.split(' ')[0]}</span>
+                            </button>
+                        `;
+                    }
+                });
+            } else {
+                // Admin specific layout with central grid control panel launcher
+                mNav.innerHTML = `
+                    <button onclick="navigateTo('dashboard')" class="flex flex-col items-center py-1 ${state.currentView==='dashboard'?'text-indigo-600':'text-slate-400'}">
+                        <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                        <span class="text-[10px]">แดชบอร์ด</span>
+                    </button>
+                    <button onclick="navigateTo('bookings')" class="flex flex-col items-center py-1 ${state.currentView==='bookings'?'text-indigo-600':'text-slate-400'}">
+                        <i data-lucide="calendar-days" class="h-5 w-5"></i>
+                        <span class="text-[10px]">งานจองรถ</span>
+                    </button>
+                    
+                    <!-- Center Special Hamburger Button for Administration -->
+                    <button onclick="toggleAdminMobilePanel()" class="bg-indigo-600 text-white p-3 rounded-full -translate-y-4 shadow-lg shadow-indigo-300 relative border-4 border-white">
+                        <i data-lucide="menu" id="admin-hamburger-icon" class="h-5 w-5"></i>
+                    </button>
+
+                    <button onclick="navigateTo('vehicles')" class="flex flex-col items-center py-1 ${state.currentView==='vehicles'?'text-indigo-600':'text-slate-400'}">
+                        <i data-lucide="car-front" class="h-5 w-5"></i>
+                        <span class="text-[10px]">ยานพาหนะ</span>
+                    </button>
+                    <button onclick="openLogoutModal()" class="flex flex-col items-center py-1 text-red-500">
+                        <i data-lucide="log-out" class="h-5 w-5"></i>
+                        <span class="text-[10px]">ออกระบบ</span>
+                    </button>
+                `;
+
+                // Re-build Admin Drawer Panel content
+                mPanel.innerHTML = `
+                    <div class="col-span-3 flex justify-between items-center pb-2 border-b border-slate-100 mb-1">
+                        <h5 class="text-xs font-bold text-slate-800 flex items-center gap-1"><i data-lucide="sliders" class="h-3.5 w-3.5 text-indigo-600"></i> เมนูจัดการระบบผู้ดูแล</h5>
+                        <button onclick="toggleAdminMobilePanel()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="h-4 w-4"></i></button>
+                    </div>
+                    <button onclick="navigateTo('dashboard')" class="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center gap-1 border border-slate-100">
+                        <i data-lucide="pie-chart" class="h-5 w-5 text-indigo-600"></i>
+                        <span class="text-[10px] font-medium text-slate-700">ดูสถิติรวม</span>
+                    </button>
+                    <button onclick="navigateTo('bookings')" class="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center gap-1 border border-slate-100">
+                        <i data-lucide="check-square" class="h-5 w-5 text-indigo-600"></i>
+                        <span class="text-[10px] font-medium text-slate-700">อนุมัติคำขอ</span>
+                    </button>
+                    <button onclick="navigateTo('vehicles')" class="bg-slate-50 p-3 rounded-xl flex flex-col items-center text-center gap-1 border border-slate-100">
+                        <i data-lucide="plus-circle" class="h-5 w-5 text-indigo-600"></i>
+                        <span class="text-[10px] font-medium text-slate-700">เพิ่มคันรถใหม่</span>
+                    </button>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function toggleAdminMobilePanel() {
+            const mPanel = document.getElementById('admin-mobile-panel');
+            state.isAdminMobilePanelOpen = !state.isAdminMobilePanelOpen;
+            if (state.isAdminMobilePanelOpen) {
+                mPanel.classList.remove('hidden');
+                document.getElementById('admin-hamburger-icon').style.transform = 'rotate(90deg)';
+            } else {
+                mPanel.classList.add('hidden');
+                document.getElementById('admin-hamburger-icon').style.transform = 'rotate(0deg)';
+            }
+            lucide.createIcons();
+        }
+
+        // --- 7. RENDERING MODULE: LANDING PAGE FOR GUESTS ---
+        function renderGuestLanding() {
+            // Count system metrics
+            document.getElementById('stat-total-cars').innerText = state.vehicles.length;
+            document.getElementById('stat-avail-cars').innerText = state.vehicles.filter(c => c.status === 'พร้อมใช้งาน').length;
+            document.getElementById('stat-month-bookings').innerText = state.bookings.length;
+            document.getElementById('stat-total-drivers').innerText = state.users.filter(u => u.role === 'Driver').length;
+
+            // Render live approved or pending public schedule
+            const container = document.getElementById('guest-booking-rows');
+            container.innerHTML = '';
+            
+            const approvedTrips = state.bookings.filter(b => b.status === 'อนุมัติแล้ว' || b.status === 'รออนุมัติ');
+            if (approvedTrips.length === 0) {
+                container.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400 text-xs">ไม่มีตารางภารกิจไปราชการในสัปดาห์นี้</td></tr>`;
+            } else {
+                approvedTrips.forEach(b => {
+                    const u = state.users.find(user => user.id === b.user_id);
+                    const v = state.vehicles.find(car => car.id === b.vehicle_id);
+                    const dateStr = new Date(b.start_date).toLocaleDateString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' น.';
+                    
+                    let badgeColor = b.status === 'อนุมัติแล้ว' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100';
+
+                    container.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition text-xs">
+                            <td class="py-3 px-2 font-medium text-slate-900">${dateStr}</td>
+                            <td class="py-3 px-2 max-w-[150px] truncate" title="${b.destination}">${b.destination}</td>
+                            <td class="py-3 px-2 text-slate-500">${v ? v.license_plate : '<span class="text-slate-400">- จัดสรรตามคิว -</span>'}</td>
+                            <td class="py-3 px-2">${u ? u.full_name : 'บุคลากรโรงเรียน'}</td>
+                            <td class="py-3 px-2"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeColor}">${b.status}</span></td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Fire Canvas Chart for Public
+            setTimeout(() => {
+                const ctx = document.getElementById('guestVehicleChart');
+                if (!ctx) return;
+                if (state.activeChart) state.activeChart.destroy();
+                
+                const types = {};
+                state.vehicles.forEach(c => { types[c.vehicle_type] = (types[c.vehicle_type] || 0) + 1; });
+
+                state.activeChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(types),
+                        datasets: [{
+                            data: Object.values(types),
+                            backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#3b82f6']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Kanit', size: 11 } } } } }
+                });
+            }, 100);
+        }
+
+        // --- 8. AUTH VIEW: DASHBOARD MODULE ---
+        function renderDashboardModule(targetEl) {
+            const role = state.currentUser.role;
+            const myBookingsCount = state.bookings.filter(b => b.user_id === state.currentUser.id).length;
+            const pendingApprovals = state.bookings.filter(b => b.status === 'รออนุมัติ').length;
+
+            targetEl.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-r from-slate-900 to-indigo-950 p-6 rounded-2xl text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div class="space-y-1">
+                            <h3 class="text-lg sm:text-xl font-bold">สวัสดีครับ/ค่ะ, ${state.currentUser.full_name}</h3>
+                            <p class="text-xs text-slate-300">ระบบยินดีต้อนรับเข้าใช้แผงควบคุมสารสนเทศยานพาหนะของโรงเรียน</p>
+                        </div>
+                        ${role === 'Teacher' ? `
+                            <button onclick="navigateTo('bookings'); openNewBookingForm();" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2.5 rounded-xl shadow-lg transition flex items-center gap-1.5">
+                                <i data-lucide="plus-circle" class="h-4 w-4"></i> เขียนใบขอจองรถยนต์
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <!-- Micro Metric Display Cards -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                            <p class="text-[11px] font-medium text-slate-400 uppercase">งานจองทั้งหมด</p>
+                            <h4 class="text-xl font-extrabold text-slate-900 mt-1">${state.bookings.length} รายการ</h4>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                            <p class="text-[11px] font-medium text-slate-400 uppercase">รอพิจารณาอนุมัติ</p>
+                            <h4 class="text-xl font-extrabold ${pendingApprovals > 0 ? 'text-amber-500 animate-pulse' : 'text-slate-900'} mt-1">${pendingApprovals} รายการ</h4>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                            <p class="text-[11px] font-medium text-slate-400 uppercase">รถพร้อมออกทริป</p>
+                            <h4 class="text-xl font-extrabold text-emerald-600 mt-1">${state.vehicles.filter(c => c.status === 'พร้อมใช้งาน').length} คัน</h4>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                            <p class="text-[11px] font-medium text-slate-400 uppercase">ลิสต์งานของฉัน</p>
+                            <h4 class="text-xl font-extrabold text-indigo-600 mt-1">${role === 'Admin' ? state.bookings.length : (role==='Teacher' ? myBookingsCount : state.bookings.filter(b=>b.driver_id===state.currentUser.id).length)} ทริป</h4>
+                        </div>
+                    </div>
+
+                    <!-- Chart Grid Panel -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                            <h4 class="font-bold text-xs sm:text-sm text-slate-800 flex items-center gap-1.5"><i data-lucide="bar-chart-2" class="text-indigo-600 h-4 w-4"></i> สถิติการใช้งานยานพาหนะโรงเรียนรายคัน</h4>
+                            <div class="h-64 relative"><canvas id="authMainChart"></canvas></div>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <h4 class="font-bold text-xs sm:text-sm text-slate-800 flex items-center gap-1.5"><i data-lucide="clock" class="text-indigo-600 h-4 w-4"></i> รายการทริปอัปเดตล่าสุด</h4>
+                                <button onclick="navigateTo('bookings')" class="text-indigo-600 hover:underline text-xs font-medium">ดูทั้งหมด</button>
+                            </div>
+                            <div id="dashboard-recent-list" class="space-y-3 divide-y divide-slate-50 max-h-64 overflow-y-auto pr-1">
+                                <!-- Dynamic rows via Loop -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Inject lists rows inside Dashboard view
+            const recentBox = document.getElementById('dashboard-recent-list');
+            recentBox.innerHTML = '';
+            
+            let sorted = [...state.bookings].slice(-4).reverse();
+            if(sorted.length === 0) {
+                recentBox.innerHTML = `<p class="text-xs text-center text-slate-400 py-6">ไม่มีประวัติการบันทึกการจอง</p>`;
+            } else {
+                sorted.forEach(b => {
+                    const u = state.users.find(user => user.id === b.user_id);
+                    recentBox.innerHTML += `
+                        <div class="pt-2 flex justify-between items-start text-xs">
+                            <div class="space-y-0.5">
+                                <p class="font-bold text-slate-900 truncate max-w-[200px]">${b.purpose}</p>
+                                <p class="text-[11px] text-slate-500">ปลายทาง: ${b.destination} (${u ? u.full_name : 'บุคลากร'})</p>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${b.status==='อนุมัติแล้ว'?'bg-emerald-50 text-emerald-700':(b.status==='รออนุมัติ'?'bg-amber-50 text-amber-700':'bg-slate-100 text-slate-600')}">${b.status}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            // Generate analytical inside Auth Dashboard
+            setTimeout(() => {
+                const ctx = document.getElementById('authMainChart');
+                if(!ctx) return;
+                
+                const labels = [];
+                const counts = [];
+                
+                state.vehicles.forEach(v => {
+                    labels.push(v.license_plate);
+                    counts.push(state.bookings.filter(b => b.vehicle_id === v.id).length);
+                });
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{ label: 'จำนวนครั้งที่ถูกจัดสรรวิ่งงาน', data: counts, backgroundColor: '#4f46e5', borderRadius: 8 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+                });
+            }, 100);
+        }
+
+        // --- 9. AUTH VIEW: BOOKINGS MANAGEMENT MODULE (CRUD + REPORT EXPORT) ---
+        function renderBookingModule(targetEl) {
+            const role = state.currentUser.role;
+            
+            targetEl.innerHTML = `
+                <div class="space-y-5">
+                    <!-- Controls and Top Filter Segment -->
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                        <div class="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <div class="relative flex-1">
+                                <i data-lucide="search" class="absolute left-3 top-2.5 text-slate-400 h-4 w-4"></i>
+                                <input type="text" id="booking-search-input" oninput="handleBookingFilter()" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 pl-9 pr-4 text-xs focus:outline-none focus:border-indigo-500" placeholder="ค้นหาจุดหมายปลายทาง หรือชื่อเหตุผล...">
+                            </div>
+                            <select id="booking-status-filter" onchange="handleBookingFilter()" class="bg-slate-50 border border-slate-200 rounded-xl py-1.5 px-3 text-xs text-slate-600 focus:outline-none">
+                                <option value="All">ทุกสถานะรายการ</option>
+                                <option value="รออนุมัติ">รออนุมัติ</option>
+                                <option value="อนุมัติแล้ว">อนุมัติแล้ว</option>
+                                <option value="ปฏิเสธ">ปฏิเสธ</option>
+                                <option value="เสร็จสิ้นภารกิจ">เสร็จสิ้นภารกิจ</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportBookingsToCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5">
+                                <i data-lucide="download" class="h-3.5 w-3.5"></i> ออกรายงาน CSV
+                            </button>
+                            ${role === 'Teacher' ? `
+                                <button onclick="openNewBookingForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-indigo-100">
+                                    <i data-lucide="plus" class="h-4 w-4"></i> จองคิวรถ
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Bookings Table Grid Container -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
+                                    <tr>
+                                        <th class="py-3 px-4">ผู้ยื่นเรื่อง / เบอร์ติดต่อ</th>
+                                        <th class="py-3 px-4">วัตถุประสงค์และสถานที่ปลายทาง</th>
+                                        <th class="py-3 px-4">วันเวลา ไป - กลับ</th>
+                                        <th class="py-3 px-4">ยานพาหนะและคนขับ</th>
+                                        <th class="py-3 px-4 text-center">สถานะ</th>
+                                        <th class="py-3 px-4 text-center">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="booking-data-rows" class="divide-y divide-slate-50 text-slate-600">
+                                    <!-- Target dynamic records -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Execute table row builder
+            handleBookingFilter();
+        }
+
+        function handleBookingFilter() {
+            const query = document.getElementById('booking-search-input').value.toLowerCase();
+            const filterStatus = document.getElementById('booking-status-filter').value;
+            const role = state.currentUser.role;
+            const uid = state.currentUser.id;
+
+            let records = [...state.bookings];
+
+            // 1. Filter data scope according to user credentials/role rule
+            if (role === 'Teacher') {
+                records = records.filter(b => b.user_id === uid);
+            } else if (role === 'Driver') {
+                records = records.filter(b => b.driver_id === uid || b.status === 'อนุมัติแล้ว');
+            }
+
+            // 2. Filter input searches & status selection
+            if (filterStatus !== 'All') records = records.filter(b => b.status === filterStatus);
+            if (query) {
+                records = records.filter(b => b.destination.toLowerCase().includes(query) || b.purpose.toLowerCase().includes(query));
+            }
+
+            const tbody = document.getElementById('booking-data-rows');
+            tbody.innerHTML = '';
+
+            if (records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-slate-400">ไม่มีข้อมูลบันทึกการขออนุมัติจองรถตามเงื่อนไขค้นหา</td></tr>`;
+                return;
+            }
+
+            records.forEach(b => {
+                const u = state.users.find(user => user.id === b.user_id);
+                const v = state.vehicles.find(car => car.id === b.vehicle_id);
+                const d = state.users.find(driver => driver.id === b.driver_id);
+
+                const dStart = new Date(b.start_date).toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const dEnd = new Date(b.end_date).toLocaleString('th-TH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                let stBadge = "bg-slate-100 text-slate-600";
+                if(b.status === 'รออนุมัติ') stBadge = "bg-amber-50 text-amber-700 border border-amber-200";
+                else if(b.status === 'อนุมัติแล้ว') stBadge = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+                else if(b.status === 'ปฏิเสธ') stBadge = "bg-red-50 text-red-600 border border-red-100";
+                else if(b.status === 'เสร็จสิ้นภารกิจ') stBadge = "bg-indigo-50 text-indigo-700 border border-indigo-100";
+
+                let actionHtml = '';
+                if (role === 'Admin') {
+                    actionHtml = `
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="openReviewBookingForm('${b.id}')" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="พิจารณาจัดสรรคันรถ"><i data-lucide="check-square" class="h-4 w-4"></i></button>
+                            <button onclick="deleteBookingRecord('${b.id}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="ลบคำขอ"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+                        </div>
+                    `;
+                } else if (role === 'Teacher' && b.status === 'รออนุมัติ') {
+                    actionHtml = `
+                        <div class="flex gap-1 justify-center">
+                            <button onclick="openEditBookingForm('${b.id}')" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition" title="แก้ไขใบคำขอ"><i data-lucide="edit-3" class="h-4 w-4"></i></button>
+                            <button onclick="cancelBookingRequest('${b.id}')" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="ยกเลิกการจอง"><i data-lucide="x-circle" class="h-4 w-4"></i></button>
+                        </div>
+                    `;
+                } else if (role === 'Driver' && b.status === 'อนุมัติแล้ว' && b.driver_id === uid) {
+                    actionHtml = `
+                        <button onclick="updateTripStatusToComplete('${b.id}')" class="bg-indigo-600 text-white px-2.5 py-1 rounded-lg text-[11px] hover:bg-indigo-700 transition font-medium">เสร็จสิ้นภารกิจ</button>
+                    `;
+                } else {
+                    actionHtml = `<span class="text-slate-400 text-[11px]">- ไม่สามารถปรับปรุงได้ -</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-3 px-4">
+                            <p class="font-bold text-slate-900">${u ? u.full_name : 'ไม่ระบุชื่อ'}</p>
+                            <p class="text-[11px] text-slate-500">${u ? u.phone : '-'}</p>
+                        </td>
+                        <td class="py-3 px-4 max-w-xs">
+                            <p class="font-semibold text-slate-800 truncate">${b.purpose}</p>
+                            <p class="text-[11px] text-slate-500 truncate flex items-center gap-0.5"><i data-lucide="map-pin" class="h-3 w-3 text-red-400"></i> ปลายทาง: ${b.destination}</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">ผู้เดินทาง: ${b.passenger_count} ท่าน</p>
+                        </td>
+                        <td class="py-3 px-4 text-slate-500">
+                            <p class="text-[11px] text-slate-800"><span class="text-emerald-600">ไป:</span> ${dStart}</p>
+                            <p class="text-[11px] text-slate-500"><span class="text-red-500">กลับ:</span> ${dEnd}</p>
+                        </td>
+                        <td class="py-3 px-4 text-xs">
+                            <p class="font-medium text-slate-900">${v ? '<span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-mono">'+v.license_plate+'</span>' : '<span class="text-amber-500">ยังไม่จัดสรรรถ</span>'}</p>
+                            <p class="text-[11px] text-slate-500 mt-1">คนขับ: ${d ? d.full_name : '<span class="text-slate-400">คอยผู้อนุมัติ</span>'}</p>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${stBadge}">${b.status}</span>
+                            ${b.admin_notes ? `<p class="text-[10px] text-slate-400 mt-1 bg-slate-50 p-1 rounded italic">"${b.admin_notes}"</p>`:''}
+                        </td>
+                        <td class="py-3 px-4 text-center">${actionHtml}</td>
+                    </tr>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        // --- 10. CRUD ACTION FUNCTIONS: BOOKING ENGINE ---
+        function openNewBookingForm() {
+            const minDate = new Date().toISOString().slice(0, 16);
+            const content = `
+                <form id="new-booking-form" onsubmit="saveNewBookingRequest(event)" class="space-y-4 text-xs">
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-700">วัตถุประสงค์ในการราชการ / ขอไปเรื่องใด *</label>
+                        <textarea id="form-bk-purpose" required class="w-full border bg-slate-50 p-2 rounded-xl focus:outline-none focus:border-indigo-500" rows="2" placeholder="ระบุเหตุผล เช่น พานักเรียนไปแข่งทักษะวิชาการศิลปหัตถกรรม"></textarea>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-700">สถานที่ปลายทางราชการ *</label>
+                        <input type="text" id="form-bk-dest" required class="w-full border bg-slate-50 p-2.5 rounded-xl focus:outline-none focus:border-indigo-500" placeholder="เช่น มหาวิทยาลัยนเรศวร พิษณุโลก">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700">จำนวนผู้โดยสาร (คน) *</label>
+                            <input type="number" id="form-bk-passengers" min="1" required class="w-full border bg-slate-50 p-2.5 rounded-xl focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700">เลือกประเภทรถที่เหมาะสมเบื้องต้น</label>
+                            <select id="form-bk-preftype" class="w-full border bg-slate-50 p-2.5 rounded-xl focus:outline-none focus:border-indigo-500">
+                                <option value="รถตู้">รถตู้ (ไม่เกิน 15 ที่นั่ง)</option>
+                                <option value="รถบัส">รถบัสใหญ่ (คณะครู/นักเรียน)</option>
+                                <option value="รถเก๋ง">รถเก๋งส่วนกลาง (4-5 ที่นั่ง)</option>
+                                <option value="รถกระบะ">รถกระบะขนของบรรทุก</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700">วันเวลา ออกเดินทาง *</label>
+                            <input type="datetime-local" id="form-bk-start" min="${minDate}" required class="w-full border bg-slate-50 p-2.5 rounded-xl focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700">วันเวลา เดินทางกลับโรงเรียน *</label>
+                            <input type="datetime-local" id="form-bk-end" min="${minDate}" required class="w-full border bg-slate-50 p-2.5 rounded-xl focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                    <div class="flex gap-2 justify-end pt-2">
+                        <button type="button" onclick="closeActionModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-slate-600 font-medium hover:bg-slate-200">ปิดหน้าต่าง</button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 shadow-md">ส่งใบคำขออนุมัติ</button>
+                    </div>
+                </form>
+            `;
+            openActionModal("เขียนใบขออนุมัติใช้งานยานพาหนะส่วนกลาง", content);
+        }
+
+        async function saveNewBookingRequest(e) {
+            e.preventDefault();
+            showLoader(true, "กำลังยื่นคำขอจองคิวรถ...");
+
+            const newObj = {
+                id: 'bk-' + Date.now(),
+                user_id: state.currentUser.id,
+                vehicle_id: null,
+                driver_id: null,
+                purpose: document.getElementById('form-bk-purpose').value.trim(),
+                destination: document.getElementById('form-bk-dest').value.trim(),
+                passenger_count: parseInt(document.getElementById('form-bk-passengers').value),
+                start_date: document.getElementById('form-bk-start').value,
+                end_date: document.getElementById('form-bk-end').value,
+                status: 'รออนุมัติ',
+                admin_notes: ''
+            };
+
+            // Cloud Save via Supabase Endpoint if exists
+            if (sbApp) {
+                try {
+                    await sbApp.from('vt_bookings').insert([{
+                        user_id: newObj.user_id,
+                        purpose: newObj.purpose,
+                        destination: newObj.destination,
+                        passenger_count: newObj.passenger_count,
+                        start_date: newObj.start_date,
+                        end_date: newObj.end_date,
+                        status: 'รออนุมัติ'
+                    }]);
+                    await syncWithSupabase();
+                } catch(err) { console.error(err); }
+            } else {
+                state.bookings.push(newObj);
+            }
+
+            showLoader(false);
+            closeActionModal();
+            showToast("ส่งใบจองคิวรถไปราชการเรียบร้อยแล้ว รอผู้บริหารพิจารณาอนุมัติ", "success");
+            handleBookingFilter();
+        }
+
+        function openReviewBookingForm(id) {
+            const b = state.bookings.find(item => item.id === id);
+            if(!b) return;
+
+            let carOptions = `<option value="">-- ไม่ระบุ / ไม่เลือกจัดสรร --</option>`;
+            state.vehicles.forEach(c => {
+                carOptions += `<option value="${c.id}" ${b.vehicle_id===c.id?'selected':''}>${c.license_plate} [${c.vehicle_type} -นั่งได้ ${c.capacity} คน] (${c.status})</option>`;
+            });
+
+            let driverOptions = `<option value="">-- ไม่ระบุ / ไม่เลือกจัดสรร --</option>`;
+            state.users.filter(u => u.role === 'Driver').forEach(d => {
+                driverOptions += `<option value="${d.id}" ${b.driver_id===d.id?'selected':''}>${d.full_name} (${d.phone})</option>`;
+            });
+
+            const content = `
+                <div class="bg-slate-50 p-3 rounded-xl text-xs space-y-1 border mb-3">
+                    <p><strong>ผู้ขอจอง:</strong> ${state.users.find(u=>u.id===b.user_id)?.full_name || 'บุคลากร'}</p>
+                    <p><strong>สถานที่และจุดประสงค์:</strong> ${b.purpose} -> ${b.destination}</p>
+                    <p><strong>จำนวนผู้ร่วมทาง:</strong> ${b.passenger_count} ท่าน</p>
+                </div>
+                <form id="review-booking-form" onsubmit="saveAdminReview(event, '${b.id}')" class="space-y-4 text-xs">
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-700">ผลการพิจารณาอนุมัติคำขอ *</label>
+                        <select id="form-rev-status" required class="w-full border bg-slate-50 p-2.5 rounded-xl text-xs">
+                            <option value="รออนุมัติ" ${b.status==='รออนุมัติ'?'selected':''}>รออนุมัติ (Pending)</option>
+                            <option value="อนุมัติแล้ว" ${b.status==='อนุมัติแล้ว'?'selected':''}>อนุมัติและจัดสรรยานพาหนะ (Approve)</option>
+                            <option value="ปฏิเสธ" ${b.status==='ปฏิเสธ'?'selected':''}>ปฏิเสธคำขอ (Reject)</option>
+                            <option value="เสร็จสิ้นภารกิจ" ${b.status==='เสร็จสิ้นภารกิจ'?'selected':''}>ภารกิจเสร็จสิ้น (Completed)</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-700">จัดสรรรถส่วนกลางโรงเรียน</label>
+                        <select id="form-rev-car" class="w-full border bg-slate-50 p-2.5 rounded-xl text-xs">${carOptions}</select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-700">จัดสรรพนักงานขับรถประจำทริป</label>
+                        <select id="form-rev-driver" class="w-full border bg-slate-50 p-2.5 rounded-xl text-xs">${driverOptions}</select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-700">บันทึกช่วยจำ/หมายเหตุจากแอดมินหรือผู้อนุมัติ</label>
+                        <input type="text" id="form-rev-notes" value="${b.admin_notes || ''}" class="w-full border bg-slate-50 p-2.5 rounded-xl" placeholder="เช่น ขอให้เช็คสภาพลมยางก่อนเดินทาง">
+                    </div>
+                    <div class="flex gap-2 justify-end pt-1">
+                        <button type="button" onclick="closeActionModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-slate-600 font-medium">ยกเลิก</button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 shadow-md">บันทึกผลการจัดสรร</button>
+                    </div>
+                </form>
+            `;
+            openActionModal("พิจารณาอนุมัติคำขอจองรถยนต์", content);
+        }
+
+        async function saveAdminReview(e, id) {
+            e.preventDefault();
+            showLoader(true, "กำลังอัปเดตสถานะการอนุมัติ...");
+
+            const st = document.getElementById('form-rev-status').value;
+            const carId = document.getElementById('form-rev-car').value || null;
+            const driverId = document.getElementById('form-rev-driver').value || null;
+            const note = document.getElementById('form-rev-notes').value.trim();
+
+            const idx = state.bookings.findIndex(b => b.id === id);
+            if(idx !== -1) {
+                state.bookings[idx].status = st;
+                state.bookings[idx].vehicle_id = carId;
+                state.bookings[idx].driver_id = driverId;
+                state.bookings[idx].admin_notes = note;
+
+                if (sbApp) {
+                    try {
+                        await sbApp.from('vt_bookings').update({
+                            status: st, vehicle_id: carId, driver_id: driverId, admin_notes: note
+                        }).eq('id', id);
+                    } catch(err) { console.error(err); }
+                }
+            }
+
+            showLoader(false);
+            closeActionModal();
+            showToast("บันทึกการจัดสรรรถและพนักงานขับรถเรียบร้อยแล้ว", "success");
+            handleBookingFilter();
+        }
+
+        async function updateTripStatusToComplete(id) {
+            openConfirmModal("เสร็จสิ้นภารกิจ", "คุณต้องการบันทึกว่าเสร็จสิ้นภารกิจการขับรถทริปนี้แล้วใช่หรือไม่?", async () => {
+                showLoader(true);
+                const idx = state.bookings.findIndex(b => b.id === id);
+                if(idx !== -1) {
+                    state.bookings[idx].status = 'เสร็จสิ้นภารกิจ';
+                    if (sbApp) {
+                        await sbApp.from('vt_bookings').update({ status: 'เสร็จสิ้นภารกิจ' }).eq('id', id);
+                    }
+                }
+                showLoader(false);
+                showToast("อัปเดตสถานะภารกิจรถเป็นเสร็จสิ้นแล้ว", "success");
+                handleBookingFilter();
+            });
+        }
+
+        function cancelBookingRequest(id) {
+            openConfirmModal("ยกเลิกคำขอจองรถ", "คุณต้องการยกเลิกคำขอใบจองรถราชการใบนี้ใช่หรือไม่?", async () => {
+                showLoader(true);
+                const idx = state.bookings.findIndex(b => b.id === id);
+                if(idx !== -1) {
+                    state.bookings[idx].status = 'ยกเลิก';
+                    if(sbApp) await sbApp.from('vt_bookings').update({ status: 'ยกเลิก' }).eq('id', id);
+                }
+                showLoader(false);
+                showToast("ยกเลิกคำขอเรียบร้อยแล้ว", "warning");
+                handleBookingFilter();
+            });
+        }
+
+        function deleteBookingRecord(id) {
+            openConfirmModal("ลบรายการข้อมูล", "คุณแน่ใจว่าต้องการลบแถวประวัติการจองนี้ออกจากระบบงานถาวรหรือไม่?", async () => {
+                showLoader(true);
+                state.bookings = state.bookings.filter(b => b.id !== id);
+                if (sbApp) await sbApp.from('vt_bookings').delete().eq('id', id);
+                showLoader(false);
+                showToast("ลบข้อมูลประวัติเรียบร้อยแล้ว", "success");
+                handleBookingFilter();
+            });
+        }
+
+        // Real functional Data Report Builder to CSV
+        function exportBookingsToCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Add BOM for Excel Thai language rendering
+            csvContent += "ID,วัตถุประสงค์,สถานที่ปลายทาง,จำนวนผู้โดยสาร,วันเวลาเริ่มต้น,วันเวลาสิ้นสุด,สถานะ\n";
+            
+            state.bookings.forEach(b => {
+                csvContent += `"${b.id}","${b.purpose}","${b.destination}",${b.passenger_count},"${b.start_date}","${b.end_date}","${b.status}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `รายงานจองรถ_โรงเรียนสุโขทัยวิทยาคม_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("ดาวน์โหลดรายงานข้อมูลไฟล์ CSV สำเร็จ", "success");
+        }
+
+        // --- 11. AUTH VIEW: VEHICLES MODULE (CRUD + REAL COMPRESSED IMAGE UPLOAD) ---
+        function renderVehicleModule(targetEl) {
+            const role = state.currentUser.role;
+            
+            targetEl.innerHTML = `
+                <div class="space-y-5">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                        <h4 class="font-bold text-xs sm:text-sm text-slate-800">รายการรถยนต์คันกลางสะสมของโรงเรียน</h4>
+                        ${role === 'Admin' ? `
+                            <button onclick="openNewVehicleForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-4 py-2 rounded-xl transition flex items-center gap-1">
+                                <i data-lucide="plus" class="h-3.5 w-3.5"></i> ลงทะเบียนเพิ่มรถใหม่
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <!-- Vehicle Grid Layout Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="vehicle-cards-box">
+                        <!-- Dynamic generated cards -->
+                    </div>
+                </div>
+            `;
+            
+            buildVehicleCards();
+        }
+
+        function buildVehicleCards() {
+            const box = document.getElementById('vehicle-cards-box');
+            box.innerHTML = '';
+            const role = state.currentUser.role;
+
+            state.vehicles.forEach(c => {
+                let badgeColor = "bg-emerald-100 text-emerald-800";
+                if(c.status === 'อยู่ระหว่างซ่อมบำรุง') badgeColor = "bg-red-100 text-red-800";
+                else if(c.status === 'บุคลากรจองคิวแล้ว') badgeColor = "bg-indigo-100 text-indigo-800";
+
+                // Error Handling if image fails to load
+                const imgTag = c.image_url 
+                    ? `<img src="${c.image_url}" onerror="handleImageLoadError(this)" class="w-full h-36 object-cover rounded-xl">`
+                    : `<div class="w-full h-36 bg-slate-100 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-1"><i data-lucide="image" class="h-8 w-8"></i><span class="text-[10px]">ไม่มีภาพถ่ายรถ</span></div>`;
+
+                box.innerHTML += `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between gap-3 slide-up">
+                        <div class="space-y-2">
+                            ${imgTag}
+                            <div>
+                                <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md font-mono">${c.license_plate}</span>
+                                <h5 class="font-bold text-slate-900 text-sm mt-1">${c.model_name}</h5>
+                                <p class="text-xs text-slate-500">ประเภท: ${c.vehicle_type} (ความจุ: ${c.capacity} ที่นั่ง)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between border-t border-slate-50 pt-2 mt-1">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeColor}">${c.status}</span>
+                            ${role === 'Admin' ? `
+                                <div class="flex gap-1">
+                                    <button onclick="openEditVehicleForm('${c.id}')" class="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="แก้ไขข้อมูล"><i data-lucide="edit-2" class="h-3.5 w-3.5"></i></button>
+                                    <button onclick="deleteVehicleRecord('${c.id}')" class="p-1 text-red-500 hover:bg-red-50 rounded" title="ลบรถ"><i data-lucide="trash-2" class="h-3.5 w-3.5"></i></button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        function handleImageLoadError(imgEl) {
+            imgEl.onerror = null;
+            const replacement = document.createElement('div');
+            replacement.className = "w-full h-36 bg-slate-50 rounded-xl flex flex-col items-center justify-center text-red-400 p-2 text-center border border-dashed";
+            replacement.innerHTML = `<i data-lucide="image-off" class="h-6 w-6 mb-1"></i><span class="text-[10px]">รูปภาพขัดข้อง/ไม่สามารถโหลดได้</span>`;
+            imgEl.parentElement.replaceChild(replacement, imgEl);
+            lucide.createIcons();
+        }
+
+        // Real Client-Side Image Compression using Canvas API before uploading
+        function compressAndProcessImage(fileInputEl, callbackSuccess) {
+            const file = fileInputEl.files[0];
+            if (!file) return callbackSuccess("");
+
+            showLoader(true, "กำลังย่อขนาดภาพลดพื้นที่จัดเก็บ...");
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (event) {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 500;
+                    const scale = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scale;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    // Compress quality to 70% JPEG format
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    showLoader(false);
+                    callbackSuccess(dataUrl); // Return small base64 or upload path string
+                };
+            };
+        }
+
+        function openNewVehicleForm() {
+            const content = `
+                <form id="new-car-form" onsubmit="saveNewVehicle(event)" class="space-y-4 text-xs">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700">เลขทะเบียนรถกลาง *</label>
+                            <input type="text" id="form-car-plate" required class="w-full border p-2.5 rounded-xl" placeholder="เช่น นข-4521 สุโขทัย">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700">ประเภทรถ *</label>
+                            <select id="form-car-type" class="w-full border p-2.5 rounded-xl">
+                                <option value="รถตู้">รถตู้</option>
+                                <option value="รถบัส">รถบัส</option>
+                                <option value="รถเก๋ง">รถเก๋ง</option>
+                                <option value="รถกระบะ">รถกระบะ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700">ยี่ห้อ / รุ่นโมเดล *</label>
+                            <input type="text" id="form-car-model" required class="w-full border p-2.5 rounded-xl" placeholder="เช่น Toyota Commuter">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700">ความจุที่นั่งผู้โดยสาร *</label>
+                            <input type="number" id="form-car-cap" required min="1" class="w-full border p-2.5 rounded-xl">
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-700">อัปโหลดภาพถ่ายรถกลาง (บีบอัดไฟล์อัตโนมัติ)</label>
+                        <input type="file" id="form-car-file" accept="image/*" class="w-full text-xs block bg-slate-50 border p-2 rounded-xl">
+                    </div>
+                    <div class="flex gap-2 justify-end pt-1">
+                        <button type="button" onclick="closeActionModal()" class="px-4 py-2 bg-slate-100 rounded-xl">ปิด</button>
+                        <button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-xl shadow">ลงทะเบียนสำเร็จ</button>
+                    </div>
+                </form>
+            `;
+            openActionModal("เพิ่มยานพาหนะเข้าสู่ส่วนกลางโรงเรียน", content);
+        }
+
+        function saveNewVehicle(e) {
+            e.preventDefault();
+            const fileIn = document.getElementById('form-car-file');
+            
+            compressAndProcessImage(fileIn, async (compressedBase64) => {
+                showLoader(true, "กำลังจัดเก็บฐานข้อมูล...");
+                
+                const newCar = {
+                    id: 'c-' + Date.now(),
+                    license_plate: document.getElementById('form-car-plate').value.trim(),
+                    vehicle_type: document.getElementById('form-car-type').value,
+                    model_name: document.getElementById('form-car-model').value.trim(),
+                    capacity: parseInt(document.getElementById('form-car-cap').value),
+                    status: 'พร้อมใช้งาน',
+                    image_url: compressedBase64 || ''
+                };
+
+                if (sbApp) {
+                    try {
+                        await sbApp.from('vt_vehicles').insert([newCar]);
+                    } catch(err) { console.error(err); }
+                } else {
+                    state.vehicles.push(newCar);
+                }
+
+                showLoader(false);
+                closeActionModal();
+                showToast("บันทึกยานพาหนะชุดใหม่เข้าสู่ระบบเรียบร้อยแล้ว", "success");
+                buildVehicleCards();
+            });
+        }
+
+        function deleteVehicleRecord(id) {
+            openConfirmModal("ลบข้อมูลรถยนต์", "คุณมั่นใจหรือไม่ที่จะลบรายชื่อรถกลางคันนี้ออกจากโรงเรียน?", async () => {
+                showLoader(true);
+                state.vehicles = state.vehicles.filter(c => c.id !== id);
+                if(sbApp) await sbApp.from('vt_vehicles').delete().eq('id', id);
+                showLoader(false);
+                showToast("ลบข้อมูลยานพาหนะสำเร็จ", "success");
+                buildVehicleCards();
+            });
+        }
+
+        // --- 12. AUTH VIEW: PROFILE MODULE (VISUALLY ENHANCED CARD) ---
+        function renderProfileModule(targetEl) {
+            const totalTrips = state.bookings.filter(b => b.user_id === state.currentUser.id || b.driver_id === state.currentUser.id).length;
+
+            targetEl.innerHTML = `
+                <div class="max-w-md mx-auto bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden slide-up">
+                    <div class="h-28 bg-gradient-to-br from-indigo-700 to-slate-900 relative"></div>
+                    <div class="p-6 pt-0 relative flex flex-col items-center text-center -translate-y-12 mb-[-48px] space-y-4">
+                        <div class="h-24 w-24 rounded-2xl bg-indigo-600 text-white font-extrabold text-2xl border-4 border-white shadow-lg flex items-center justify-center">
+                            ${state.currentUser.full_name.charAt(0)}
+                        </div>
+                        <div class="space-y-1">
+                            <h4 class="text-lg font-bold text-slate-900">${state.currentUser.full_name}</h4>
+                            <p class="text-xs text-indigo-600 bg-indigo-50 font-medium px-3 py-0.5 rounded-full inline-block">สิทธิ์ผู้ใช้: ${state.currentUser.role}</p>
+                        </div>
+                        
+                        <div class="w-full border-t border-b border-slate-50 py-3 grid grid-cols-2 text-xs">
+                            <div>
+                                <p class="text-slate-400">ตำแหน่ง/กลุ่มภารกิจ</p>
+                                <p class="font-bold text-slate-800 mt-0.5">${state.currentUser.position || 'บุคลากรฝ่ายทะเบียน'}</p>
+                            </div>
+                            <div>
+                                <p class="text-slate-400">สถิติขับ/เดินทาง</p>
+                                <p class="font-bold text-slate-800 mt-0.5">${totalTrips} เที่ยวราชการ</p>
+                            </div>
+                        </div>
+
+                        <div class="w-full text-left text-xs space-y-2">
+                            <p class="text-slate-600"><strong>ชื่อล็อกอินระบบ:</strong> <span class="font-mono bg-slate-50 px-1.5 py-0.5 rounded">${state.currentUser.username}</span></p>
+                            <p class="text-slate-600"><strong>เบอร์โทรติดต่อภายใน:</strong> ${state.currentUser.phone}</p>
+                        </div>
+
+                        <button onclick="openLogoutModal()" class="w-full bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                            <i data-lucide="log-out" class="h-4 w-4"></i> ออกจากระบบงานคิวรถ
+                        </button>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
